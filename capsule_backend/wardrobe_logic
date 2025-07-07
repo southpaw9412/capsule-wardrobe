@@ -1,0 +1,28 @@
+# wardrobe_logic.py
+import pandas as pd
+
+def generate_capsule(df: pd.DataFrame, user_input: dict):
+    df.columns = df.columns.str.strip()
+    df["Price"] = pd.to_numeric(df["Price"], errors="coerce")
+    df["Formality"] = pd.to_numeric(df["Formality"], errors="coerce")
+
+    filtered_df = df[(df["Gender"] == user_input["gender"]) | (df["Gender"] == "unisex")]
+    if user_input["excluded_fabrics"]:
+        filtered_df = filtered_df[~filtered_df["Materials"].str.contains("|".join(user_input["excluded_fabrics"]), case=False)]
+    filtered_df = filtered_df[filtered_df["StyleTags"].apply(lambda tags: any(tag in tags for tag in user_input["style_tags"]))]
+
+    grouped = filtered_df.groupby("ItemType")
+    item_types = ["Top", "Bottom", "Shoe", "Outerwear"]
+    per_item_budget = user_input["budget_total"] / len(item_types)
+
+    capsule_wardrobe = []
+    for item_type in item_types:
+        if item_type not in grouped.groups:
+            continue
+        items = grouped.get_group(item_type)
+        items = items[items["Price"] <= per_item_budget]
+        if not items.empty:
+            top_item = items.sort_values(by="Formality").iloc[0].to_dict()
+            capsule_wardrobe.append(top_item)
+
+    return capsule_wardrobe

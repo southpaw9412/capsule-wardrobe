@@ -1,0 +1,5 @@
+"ItemID,ItemType,ImageURL,Price,Sizes,Materials,StyleTags,Color,Formality,Gender"
+"TOP001,Top,https://example.com/item1.jpg,25.0,XS,S,M,L,XL,cotton,""minimalist,casual"",white,2,female"
+"BOT001,Bottom,https://example.com/item2.jpg,40.0,S,M,L,linen,""minimalist,work"",beige,3,female"
+"SHOE001,Shoe,https://example.com/item3.jpg,60.0,6,7,8,9,leather,""elegant,work"",black,4,female"
+"OUT001,Outerwear,https://example.com/item4.jpg,75.0,S,M,L,XL,polyester,""casual,travel"",navy,2,unisex"
