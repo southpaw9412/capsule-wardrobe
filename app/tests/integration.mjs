@@ -9,10 +9,27 @@ const moduleFiles = (await readdir(serverRoot, { recursive: true }))
   .sort((a, b) =>
     a === 'index.js' ? -1 : b === 'index.js' ? 1 : a.localeCompare(b),
   );
-const modules = moduleFiles.map((file) => ({
-  type: 'ESModule',
-  path: path.join(serverRoot, file),
-}));
+// Buffer the bounded test fixtures at the test transport boundary. Otherwise
+// early auth/size rejections can close the loopback socket while Undici is
+// still uploading on Linux, hiding the handler's response behind ECONNRESET.
+// This wrapper exists only in the test manifest, never in the deployed Worker.
+const modules = [
+  {
+    type: 'ESModule',
+    path: path.join(serverRoot, '__test_transport.mjs'),
+    contents: `import app from './index.js';
+export default { async fetch(request, env, ctx) {
+  const body = request.body ? await request.arrayBuffer() : undefined;
+  return app.fetch(new Request(request.url, {
+    method: request.method, headers: request.headers, body,
+  }), env, ctx);
+}};`,
+  },
+  ...moduleFiles.map((file) => ({
+    type: 'ESModule',
+    path: path.join(serverRoot, file),
+  })),
+];
 const mf = new Miniflare(
   convertV4MiniflareOptions({
     modules,
@@ -233,3 +250,4 @@ try {
 } finally {
   await mf.dispose();
 }
+
