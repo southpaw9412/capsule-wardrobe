@@ -3,6 +3,14 @@ import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { ApiError } from './wardrobe';
 export const db = () => env.DB;
 export const files = () => env.FILES;
+export async function readJson(request: Request) {
+  const raw = await limitedBody(request, 16384);
+  try {
+    return JSON.parse(new TextDecoder().decode(raw)) as unknown;
+  } catch {
+    throw new ApiError('Send valid details.');
+  }
+}
 export async function owner(request: Request, write = false): Promise<string> {
   const user = await getChatGPTUser();
   if (!user) throw new ApiError('Please sign in to access your wardrobe.', 401);

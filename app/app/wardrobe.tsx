@@ -1,13 +1,13 @@
 'use client';
 /* Private images must bypass a shared image optimizer. Auth links require a full top-level navigation. */
 /* oxlint-disable next/no-img-element, next/no-html-link-for-pages */
+import { api, Picker, GarmentImage, WardrobeHeader } from './wardrobe-ui';
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Plus,
   Search,
-  LockKeyhole,
   Shirt,
   Camera,
   X,
@@ -37,13 +37,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Empty } from '@/components/ui/empty';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,81 +77,6 @@ const colors: Record<string, string> = {
   Unknown: '#e0e4ed',
   Multicolor: 'linear-gradient(130deg,#e4b290,#98a8ce,#8baf90)',
 };
-async function api<T = { ok: boolean }>(
-  path: string,
-  options?: RequestInit,
-): Promise<T> {
-  const response = await fetch(path, options);
-  const data = (await response.json().catch(() => ({
-    error: 'The server could not complete this request.',
-  }))) as T & { error?: string };
-  if (!response.ok)
-    throw new Error(
-      response.status === 401
-        ? 'Your session expired. Sign in again to continue.'
-        : data.error || 'Please try again.',
-    );
-  return data;
-}
-function Picker({
-  label,
-  value,
-  values,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  values: readonly string[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <Select
-        value={value}
-        onValueChange={(v) => {
-          if (v) onChange(v);
-        }}
-      >
-        <SelectTrigger aria-label={label} className="field-select">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {values.map((v) => (
-            <SelectItem key={v} value={v}>
-              {v}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
-  );
-}
-function GarmentImage({
-  src,
-  alt,
-  className = '',
-}: {
-  src: string;
-  alt: string;
-  className?: string;
-}) {
-  const [broken, setBroken] = useState(false);
-  return broken ? (
-    <div className={`broken-image ${className}`}>
-      <ImageOff size={24} />
-      <span>Photo unavailable</span>
-    </div>
-  ) : (
-    <img
-      className={className}
-      src={src}
-      alt={alt}
-      loading="lazy"
-      onError={() => setBroken(true)}
-    />
-  );
-}
 function uploadPhoto(
   item: Upload,
   onProgress: (value: number) => void,
@@ -516,24 +435,7 @@ export default function Wardrobe({ signedIn }: { signedIn: boolean }) {
   ).length;
   return (
     <div className="app-shell">
-      <header className="masthead">
-        <a className="wordmark" href="/">
-          capsule
-        </a>
-        <span className="edition">YOUR EVERYDAY, RECONSIDERED</span>
-        <span className="private-label">
-          <LockKeyhole size={14} /> Private wardrobe
-          {signedIn && (
-            <a
-              className="signout"
-              href="/signout-with-chatgpt?return_to=%2F"
-              target="_top"
-            >
-              Sign out
-            </a>
-          )}
-        </span>
-      </header>
+      <WardrobeHeader signedIn={signedIn} active="wardrobe" />
       <main className="workspace">
         <div className="title-row">
           <div>

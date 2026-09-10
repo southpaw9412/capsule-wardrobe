@@ -2,6 +2,7 @@ import { Miniflare, convertV4MiniflareOptions, FormData } from 'miniflare';
 import { readFile, readdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { testOutfits } from './outfits.mjs';
 const root = process.cwd();
 const serverRoot = path.join(root, 'dist/server');
 const moduleFiles = (await readdir(serverRoot, { recursive: true }))
@@ -74,9 +75,27 @@ async function status(response, expected, label) {
 }
 try {
   const db = await mf.getD1Database('DB');
+  const migrationPiece = crypto.randomUUID();
   for (const file of (await readdir('drizzle'))
     .filter((x) => x.endsWith('.sql'))
     .sort()) {
+    if (file.startsWith('0001_')) {
+      await db
+        .prepare(
+          'INSERT INTO garments(id,owner_id,name,image_key,mime_type,bytes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',
+        )
+        .bind(
+          migrationPiece,
+          'upgrade-owner',
+          'Existing favorite',
+          'existing/photo',
+          'image/png',
+          123,
+          '2026-01-01',
+          '2026-01-01',
+        )
+        .run();
+    }
     const sql = await readFile(`drizzle/${file}`, 'utf8');
     for (const statement of sql
       .split('--> statement-breakpoint')
@@ -84,6 +103,16 @@ try {
       .filter(Boolean))
       await db.prepare(statement).run();
   }
+  const preserved = await db
+    .prepare('SELECT name,image_key,bytes FROM garments WHERE id=?')
+    .bind(migrationPiece)
+    .first();
+  assert.deepEqual(preserved, {
+    name: 'Existing favorite',
+    image_key: 'existing/photo',
+    bytes: 123,
+  });
+  checks++;
   await status(await request('/api/garments', null), 401, 'anonymous list');
   await status(
     await request('/api/garments', null, { method: 'POST', body: body() }),
@@ -244,10 +273,11 @@ try {
     200,
     'clean concurrent upload',
   );
+  const outfitChecks = await testOutfits({ db, request, status, r2 });
+  checks += outfitChecks;
   console.log(
-    `PASS: ${checks} checks covering authentication, isolation, uploads, validation, persistence, retries, edits, and deletion.`,
+    `PASS: ${checks} checks covering wardrobe storage, upgrade preservation, outfit suggestions, locks, saved looks, wear history, isolation, retries, and deletion.`,
   );
 } finally {
   await mf.dispose();
 }
-
